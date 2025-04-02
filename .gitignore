@@ -1,0 +1,43 @@
+testimg.png
+
+# Build artifacts
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Logs
+*.log
+*.tlog
+*.log*
+
+# IDE settings (for Visual Studio)
+.vscode/
+*.vs/
+*.vscode/
+
+# NuGet Packages
+*.nupkg
+packages/
+project.lock.json
+project.assets.json
+project.nuget.cache
+
+# Debugging/tracing
+*.pdb
+
+# Resharper
+*.DotSettings.user
+
+# Rider
+.idea/
+
+# Backup files
+*.bak
+*.swp
+*~
+backup.txt
