@@ -1,63 +1,89 @@
 using System;
 using OpenCvSharp;
+using CSCore;
+using CSCore.SoundOut;
+using CSCore.Codecs.WAV;
 
-class Program
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        var soundOut = new WasapiOut();
+        var audioFile = new AudioFileReader("/Users/alexanderdomino/Documents/SWIGX/shot.mp3");
+
+        soundOut.Initialize(audioFile);
+        soundOut.Play();
+    }
+}
+// Include NAudio for MP3 playback
+
+class LaserPointerWebcam
 {
     static void Main()
     {
-        using var capture = new VideoCapture(0);  // Open the webcam (0 is typically the default camera)
+        using var capture = new VideoCapture(0);
         if (!capture.IsOpened())
         {
-            Console.WriteLine("Failed to open webcam.");
+            Console.WriteLine("Error: Could not open webcam.");
             return;
         }
 
-        using var window = new Window("Webcam Feed");
-        using var maskWindow = new Window("Mask View");  // Debugging window for mask
-        using var frame = new Mat();
-        using var hsvFrame = new Mat();
-        using var mask = new Mat();
-        using var blurredFrame = new Mat();
+        using var windowOriginal = new Window("Webcam Feed");
+        using var windowMask = new Window("Detected Laser Mask");
+        using var kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(8, 8));
 
-        // Specific HSV range for detecting the red laser point
-        int lowerH = 160, upperH = 190;  // Hue range (example: red hue)
-        int lowerS = 15, upperS = 30;   // Saturation range
-        int lowerV = 90, upperV = 100;   // Value range
 
-        lowerS = (int)(lowerS * 2.55);  // Convert Saturation percentage to OpenCV scale (0-255)
-        upperS = (int)(upperS * 2.55);  // Convert Saturation percentage to OpenCV scale (0-255)
-        lowerV = (int)(lowerV * 2.55);  // Convert Value percentage to OpenCV scale (0-255)
-        upperV = (int)(upperV * 2.55);
+        // Load MP3 sound
+        string soundFilePath = "/Users/alexanderdomino/Documents/SWIGX/shot.mp3"; // Replace with your MP3 file path
+        var player = new AudioFileReader(soundFilePath);
+        var waveOut = new WaveOutEvent();
+        waveOut.Init(player);
+
+        bool laserDetected = false; // To avoid playing the sound repeatedly
 
         while (true)
         {
+            using var frame = new Mat();
             capture.Read(frame);
-            if (frame.Empty()) break;
+            if (frame.Empty())
+                break;
 
-            // Apply Gaussian Blur to reduce noise
-            Cv2.GaussianBlur(frame, blurredFrame, new Size(7, 7), 0);
+            using var mask = new Mat();
+            using var brightMask = new Mat();
+            using var redDominanceMask = new Mat();
+            using var finalMask = new Mat();
 
-            // Convert the frame to HSV color space
-            Cv2.CvtColor(blurredFrame, hsvFrame, ColorConversionCodes.BGR2HSV);
+            // Convert to grayscale for brightness detection
+            using var gray = new Mat();
+            Cv2.CvtColor(frame, gray, ColorConversionCodes.BGR2GRAY);
+            Cv2.Threshold(gray, brightMask, 210, 255, ThresholdTypes.Binary);
 
-            // Define the lower and upper bounds for the HSV range
-            Scalar lowerBound = new Scalar(lowerH, lowerS, lowerV);  // Lower HSV bound
-            Scalar upperBound = new Scalar(upperH, upperS, upperV);  // Upper HSV bound
+            // Extract color channels
+            Mat[] channels;
+            Cv2.Split(frame, out channels);
+            Mat redChannel = channels[2], greenChannel = channels[1], blueChannel = channels[0];
 
-            // Threshold the HSV image for the red color range (laser point)
-            Cv2.InRange(hsvFrame, lowerBound, upperBound, mask);
+            // Create red-dominance mask: (Red > Green) & (Red > Blue)
+            Cv2.Threshold(redChannel - greenChannel, redDominanceMask, 30, 255, ThresholdTypes.Binary);
+            Cv2.Threshold(redChannel - blueChannel, mask, 30, 255, ThresholdTypes.Binary);
 
-            // Morphological transformations to remove noise
-            Cv2.MorphologyEx(mask, mask, MorphTypes.Open, Cv2.GetStructuringElement(MorphShapes.Rect, new Size(3, 3)));
-            Cv2.MorphologyEx(mask, mask, MorphTypes.Close, Cv2.GetStructuringElement(MorphShapes.Rect, new Size(3, 3)));
+            // Combine bright mask and red dominance mask
+            Cv2.BitwiseAnd(brightMask, redDominanceMask, finalMask);
+            Cv2.BitwiseAnd(finalMask, mask, finalMask);
 
-            // Find contours of the red laser point
-            Cv2.FindContours(mask, out var contours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+            // Morphological operations to fill potential rings
+            Cv2.Dilate(finalMask, finalMask, kernel);
+            Cv2.MorphologyEx(finalMask, finalMask, MorphTypes.Close, kernel);
+
+            // Find contours
+            Cv2.FindContours(finalMask, out var contours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+
+            bool foundLaser = false;
 
             foreach (var contour in contours)
             {
                 double area = Cv2.ContourArea(contour);
-                if (area > 5 && area < 500)  // Filter by area to detect red dot
+                if (area > 0 && area < 3000)
                 {
                     var moments = Cv2.Moments(contour);
                     if (moments.M00 != 0)
@@ -65,34 +91,31 @@ class Program
                         int centerX = (int)(moments.M10 / moments.M00);
                         int centerY = (int)(moments.M01 / moments.M00);
 
-                        // Draw a circle around the detected laser dot
+                        // Draw a circle around detected laser dot
                         Cv2.Circle(frame, new Point(centerX, centerY), 10, Scalar.Blue, 2);
+
+                        foundLaser = true;
                     }
                 }
             }
 
-            // Show the frame with detection
-            window.ShowImage(frame);
-            maskWindow.ShowImage(mask);  // Show the mask for debugging
-
-            // Check for key press
-            int key = Cv2.WaitKey(1);
-            if (key == 'q')  // Press 'q' to exit
-                break;
-            else if (key == 'p')  // Press 'p' to print HSV values for debugging
+            // Play sound if laser is detected and it hasn't been played recently
+            if (foundLaser && !laserDetected)
             {
-                Console.WriteLine("Printing HSV values:");
-                for (int y = 0; y < hsvFrame.Rows; y++)
-                {
-                    for (int x = 0; x < hsvFrame.Cols; x++)
-                    {
-                        Vec3b pixel = hsvFrame.At<Vec3b>(y, x);
-                        Console.WriteLine($"Pixel({x}, {y}) - H: {pixel[0]}, S: {pixel[1]}, V: {pixel[2]}");
-                    }
-                }
+                waveOut.Play(); // Play the sound
+                laserDetected = true;
             }
-        }
+            else if (!foundLaser)
+            {
+                laserDetected = false; // Reset when no laser is detected
+            }
 
-        capture.Release();  // Release the webcam
+            // Display results
+            windowOriginal.ShowImage(frame);
+            windowMask.ShowImage(finalMask);
+
+            if (Cv2.WaitKey(1) == 27) // Press 'Esc' to exit
+                break;
+        }
     }
 }
