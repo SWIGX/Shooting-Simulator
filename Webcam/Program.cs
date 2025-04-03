@@ -1,21 +1,6 @@
 using System;
+using System.Diagnostics;
 using OpenCvSharp;
-using CSCore;
-using CSCore.SoundOut;
-using CSCore.Codecs.WAV;
-
-public class Program
-{
-    public static void Main(string[] args)
-    {
-        var soundOut = new WasapiOut();
-        var audioFile = new AudioFileReader("/Users/alexanderdomino/Documents/SWIGX/shot.mp3");
-
-        soundOut.Initialize(audioFile);
-        soundOut.Play();
-    }
-}
-// Include NAudio for MP3 playback
 
 class LaserPointerWebcam
 {
@@ -32,14 +17,8 @@ class LaserPointerWebcam
         using var windowMask = new Window("Detected Laser Mask");
         using var kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(8, 8));
 
-
-        // Load MP3 sound
-        string soundFilePath = "/Users/alexanderdomino/Documents/SWIGX/shot.mp3"; // Replace with your MP3 file path
-        var player = new AudioFileReader(soundFilePath);
-        var waveOut = new WaveOutEvent();
-        waveOut.Init(player);
-
-        bool laserDetected = false; // To avoid playing the sound repeatedly
+        // Path to your MP3 file
+        string mp3File = "/Users/alexanderdomino/Documents/SWIGX/shot.m4a";
 
         while (true)
         {
@@ -72,17 +51,18 @@ class LaserPointerWebcam
             Cv2.BitwiseAnd(finalMask, mask, finalMask);
 
             // Morphological operations to fill potential rings
-            Cv2.Dilate(finalMask, finalMask, kernel);
+            Cv2.Erode(finalMask, finalMask, kernel);
             Cv2.MorphologyEx(finalMask, finalMask, MorphTypes.Close, kernel);
 
             // Find contours
             Cv2.FindContours(finalMask, out var contours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
 
-            bool foundLaser = false;
+            bool laserDetected = false;
 
             foreach (var contour in contours)
             {
                 double area = Cv2.ContourArea(contour);
+                Console.WriteLine($"Contour area: {area}");
                 if (area > 0 && area < 3000)
                 {
                     var moments = Cv2.Moments(contour);
@@ -94,20 +74,15 @@ class LaserPointerWebcam
                         // Draw a circle around detected laser dot
                         Cv2.Circle(frame, new Point(centerX, centerY), 10, Scalar.Blue, 2);
 
-                        foundLaser = true;
+                        laserDetected = true;
                     }
                 }
             }
 
-            // Play sound if laser is detected and it hasn't been played recently
-            if (foundLaser && !laserDetected)
+            // Play sound if laser is detected
+            if (laserDetected)
             {
-                waveOut.Play(); // Play the sound
-                laserDetected = true;
-            }
-            else if (!foundLaser)
-            {
-                laserDetected = false; // Reset when no laser is detected
+                PlaySound(mp3File);
             }
 
             // Display results
@@ -116,6 +91,28 @@ class LaserPointerWebcam
 
             if (Cv2.WaitKey(1) == 27) // Press 'Esc' to exit
                 break;
+        }
+    }
+
+    // Method to play the sound using afplay
+    static void PlaySound(string mp3File)
+    {
+        string afplayCommand = $"afplay {mp3File}";
+
+        try
+        {
+            ProcessStartInfo startInfo = new ProcessStartInfo
+            {
+                FileName = "bash",
+                Arguments = $"-c \"{afplayCommand}\"",
+                CreateNoWindow = true,
+                UseShellExecute = false
+            };
+            Process process = Process.Start(startInfo);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error playing sound: {ex.Message}");
         }
     }
 }
