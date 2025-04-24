@@ -42,51 +42,6 @@ namespace csharp
                 foreach (TagDetection detection in detections)
                 {
                     Console.WriteLine("Tag ID: " + detection.id);
-
-                    Point[] points = detection.points;
-                    if (points != null && points.Length == 4)
-                    {
-                        // Draw the square around the tag
-                        for (int i = 0; i < 4; i++)
-                        {
-                            Point p1 = points[i];
-                            Point p2 = points[(i + 1) % 4]; // Wrap to connect last point to first
-                            Cv2.Line(frame, p1, p2, Scalar.LimeGreen, 2);
-                        }
-
-                        // Draw the tag ID at the center
-                        int centerX = (points[0].X + points[2].X) / 2;
-                        int centerY = (points[0].Y + points[2].Y) / 2;
-                        Cv2.PutText(frame, detection.id.ToString(), new Point(centerX, centerY),
-                                    HersheyFonts.HersheySimplex, 0.5, Scalar.Yellow, 2);
-
-                        // Calculate the bounding box of the detected AprilTag
-                        Rect tagRect = new Rect(
-                            Math.Min(Math.Min(points[0].X, points[1].X), Math.Min(points[2].X, points[3].X)),
-                            Math.Min(Math.Min(points[0].Y, points[1].Y), Math.Min(points[2].Y, points[3].Y)),
-                            Math.Abs(points[0].X - points[2].X),
-                            Math.Abs(points[0].Y - points[1].Y)
-                        );
-
-                        // Resize the deer image to fit inside the AprilTag bounding box
-                        Mat resizedDeerImage = new Mat();
-                        Cv2.Resize(deerImage, resizedDeerImage, new Size(tagRect.width, tagRect.height));
-
-                        // Create a mask for the alpha channel of the deer image
-                        Mat deerAlphaChannel = resizedDeerImage.Split()[3]; // Assuming alpha channel is the fourth channel
-
-                        // Use the tagRect to overlay the deer image on the frame
-                        for (int y = 0; y < resizedDeerImage.Rows; y++)
-                        {
-                            for (int x = 0; x < resizedDeerImage.Cols; x++)
-                            {
-                                if (deerAlphaChannel.At<byte>(y, x) > 0) // Only blend where alpha > 0
-                                {
-                                    frame.At<Vec3b>(tagRect.Top + y, tagRect.Left + x) = resizedDeerImage.At<Vec3b>(y, x);
-                                }
-                            }
-                        }
-                    }
                 }
 
                 // === Laser Detection ===
