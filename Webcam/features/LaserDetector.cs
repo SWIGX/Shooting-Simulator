@@ -7,7 +7,7 @@ namespace Features
         private readonly Mat _kernel;
         private readonly bool _debugMode;
 
-        public LaserDetector(Mat kernel, bool debugMode = true)
+        public LaserDetector(Mat kernel, bool debugMode = false)
         {
             _kernel = kernel;
             _debugMode = debugMode;
