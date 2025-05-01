@@ -12,8 +12,8 @@ namespace csharp
         public int id; //id tag`id
         public int hammingDistance; // hamming distance between Observed code and matched code
         public int rotation;
-        public Point[] points;//four corner
-        public Mat homography;
+        public Point[]? points;//four corner
+        public Mat? homography;
 
         public TagDetection()
         {
@@ -32,6 +32,9 @@ namespace csharp
         /// </returns>
         Point2d[] _convertPoint2Point2D()
         {
+            if (this.points == null || this.points.Length != 4)
+                throw new InvalidOperationException("Points must be assigned and contain exactly 4 elements.");
+
             Point2d[] points2d = new Point2d[4];
             for (int i = 0; i < 4; i++)
             {
@@ -39,6 +42,7 @@ namespace csharp
             }
             return points2d;
         }
+
         /// <summary>
         /// 得到旋转矩阵，需要使用opencv
         /// </summary>

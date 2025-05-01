@@ -8,8 +8,8 @@ using Features;
 class Program
 {
     static bool enableLaserDetection = true;
-    static bool enablePlaySound = true;
-    static bool enableAprilTagDetection = true;
+    static bool enablePlaySound = false;
+    static bool enableAprilTagDetection = false;
 
     static void Main()
     {
@@ -27,7 +27,7 @@ class Program
         string deerImagePath = "/Users/alexanderdomino/Documents/SWIGX/deer.png";
         Mat deerImage = Cv2.ImRead(deerImagePath, ImreadModes.Unchanged);
 
-        ApriltagDetector apriltagDetector = null;
+        ApriltagDetector? apriltagDetector = null;
         if (enableAprilTagDetection)
             apriltagDetector = new ApriltagDetector("canny", false, "tag25h9");
 

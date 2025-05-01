@@ -1,12 +1,16 @@
+using OpenCvSharp;
+
 namespace Features
 {
     class LaserDetector
     {
         private readonly Mat _kernel;
+        private readonly bool _debugMode;
 
-        public LaserDetector(Mat kernel)
+        public LaserDetector(Mat kernel, bool debugMode = true)
         {
             _kernel = kernel;
+            _debugMode = debugMode;
         }
 
         public bool Process(Mat frame)
@@ -18,18 +22,28 @@ namespace Features
             using var finalMask = new Mat();
 
             Cv2.CvtColor(frame, gray, ColorConversionCodes.BGR2GRAY);
-            Cv2.Threshold(gray, brightMask, 210, 255, ThresholdTypes.Binary);
+            Cv2.Threshold(gray, brightMask, 250, 255, ThresholdTypes.Binary);
 
             Cv2.Split(frame, out Mat[] channels);
             Mat redChannel = channels[2], greenChannel = channels[1], blueChannel = channels[0];
 
             Cv2.Threshold(redChannel - greenChannel, redDominanceMask, 30, 255, ThresholdTypes.Binary);
-            Cv2.Threshold(redChannel - blueChannel, mask, 30, 255, ThresholdTypes.Binary);
-            Cv2.BitwiseAnd(brightMask, redDominanceMask, finalMask);
-            Cv2.BitwiseAnd(finalMask, mask, finalMask);
 
-            Cv2.Erode(finalMask, finalMask, _kernel);
+            Cv2.Dilate(brightMask, brightMask, _kernel);
+            Cv2.BitwiseAnd(brightMask, redDominanceMask, finalMask);
+
+            //Cv2.Erode(finalMask, finalMask, _kernel);
             Cv2.MorphologyEx(finalMask, finalMask, MorphTypes.Close, _kernel);
+
+            if (_debugMode)
+            {
+                ShowDebugWindow("Gray", gray);
+                ShowDebugWindow("Bright Mask", brightMask);
+                ShowDebugWindow("Red Dominance Mask", redDominanceMask);
+                //ShowDebugWindow("Red vs Blue Mask", mask);
+                ShowDebugWindow("Final Mask", finalMask);
+                Cv2.WaitKey(1); // Refresh windows
+            }
 
             Cv2.FindContours(finalMask, out var contours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
 
@@ -44,12 +58,20 @@ namespace Features
                         int centerX = (int)(moments.M10 / moments.M00);
                         int centerY = (int)(moments.M01 / moments.M00);
                         Cv2.Circle(frame, new Point(centerX, centerY), 10, Scalar.Blue, 2);
+                        Console.WriteLine("Laser detected");
                         return true;
                     }
                 }
             }
 
             return false;
+        }
+
+        private void ShowDebugWindow(string name, Mat mat)
+        {
+            using var display = new Mat();
+            Cv2.BitwiseNot(mat, display); // Invert black/white
+            Cv2.ImShow(name, display);
         }
     }
 }
