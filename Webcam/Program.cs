@@ -23,7 +23,7 @@ class Program
         using var windowOriginal = new Window("Webcam Feed");
         using var kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(8, 8));
 
-        string mp3File = "/Users/alexanderdomino/Documents/SWIGX/shot.m4a";
+        string mp3File = "/Users/alexanderdomino/Documents/SWIGX/shot_win.m4a";
         string deerImagePath = "/Users/alexanderdomino/Documents/SWIGX/deer.png";
         Mat deerImage = Cv2.ImRead(deerImagePath, ImreadModes.Unchanged);
 
@@ -32,7 +32,7 @@ class Program
             apriltagDetector = new ApriltagDetector("canny", false, "tag25h9");
 
         LaserDetector laserDetector = new LaserDetector(kernel);
-        SoundPlayer soundPlayer = new SoundPlayer();
+        WinSoundPlayer soundPlayer = new WinSoundPlayer();
 
         while (true)
         {
