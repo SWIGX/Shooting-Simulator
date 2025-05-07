@@ -5,7 +5,7 @@ namespace Features
 {
     class WinSoundPlayer
     {
-        private readonly TimeSpan _bounceTime = TimeSpan.FromMilliseconds(200); // 200ms cooldown
+        private readonly TimeSpan _bounceTime = TimeSpan.FromMilliseconds(200);
         private DateTime _lastPlayed = DateTime.MinValue;
 
         public void Play(string filePath)
@@ -17,8 +17,8 @@ namespace Features
 
             try
             {
-                using SoundPlayer player = new SoundPlayer(filePath);
-                player.Play(); // Use PlaySync() if you want it to block
+                var player = new SoundPlayer(filePath);
+                player.Play(); // or .PlaySync() to block until done
             }
             catch (Exception ex)
             {
