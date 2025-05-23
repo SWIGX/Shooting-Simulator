@@ -22,12 +22,12 @@ namespace Features
             using var finalMask = new Mat();
 
             Cv2.CvtColor(frame, gray, ColorConversionCodes.BGR2GRAY);
-            Cv2.Threshold(gray, brightMask, 250, 255, ThresholdTypes.Binary);
+            Cv2.Threshold(gray, brightMask, 230, 255, ThresholdTypes.Binary);
 
             Cv2.Split(frame, out Mat[] channels);
             Mat redChannel = channels[2], greenChannel = channels[1], blueChannel = channels[0];
 
-            Cv2.Threshold(redChannel - greenChannel, redDominanceMask, 30, 255, ThresholdTypes.Binary);
+            Cv2.Threshold(redChannel - greenChannel, redDominanceMask, 18, 255, ThresholdTypes.Binary);
 
             Cv2.Dilate(brightMask, brightMask, _kernel);
             Cv2.BitwiseAnd(brightMask, redDominanceMask, finalMask);

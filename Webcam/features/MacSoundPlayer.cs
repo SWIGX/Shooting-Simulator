@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace Features
 {
-    class SoundPlayer
+    class MacSoundPlayer
     {
         private readonly TimeSpan _bounceTime = TimeSpan.FromMilliseconds(200); // 500ms cooldown
         private DateTime _lastPlayed = DateTime.MinValue;

@@ -8,7 +8,7 @@ using Features;
 class Program
 {
     static bool enableLaserDetection = true;
-    static bool enablePlaySound = false;
+    static bool enablePlaySound = true;
     static bool enableAprilTagDetection = false;
 
     static void Main()
@@ -20,10 +20,12 @@ class Program
             return;
         }
 
-        using var windowOriginal = new Window("Webcam Feed");
+        //using var windowOriginal = new Window("Webcam Feed", WindowMode.Fullscreen);
+        Cv2.NamedWindow("Shooting Simulator", WindowFlags.Normal);
+        Cv2.SetWindowProperty("Shooting Simulator", WindowPropertyFlags.Fullscreen, 1);
         using var kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(8, 8));
 
-        string mp3File = "/Users/alexanderdomino/Documents/SWIGX/shot_win.m4a";
+        string mp3File = "C:/Users/ECE3D/Downloads/SWIGX-feature-newrec/SWIGX-feature-newrec/shot_win.wav";
         string deerImagePath = "/Users/alexanderdomino/Documents/SWIGX/deer.png";
         Mat deerImage = Cv2.ImRead(deerImagePath, ImreadModes.Unchanged);
 
@@ -51,7 +53,8 @@ class Program
             if (laserDetected && enablePlaySound)
                 soundPlayer.Play(mp3File);
 
-            windowOriginal.ShowImage(frame);
+            //windowOriginal.ShowImage(frame);
+            Cv2.ImShow("Shooting Simulator", frame);
 
             if (Cv2.WaitKey(1) == 27) // ESC to quit
                 break;
