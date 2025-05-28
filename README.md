@@ -1,1 +1,1 @@
-# SWIGX
+# SWIGX Shooting Simulator
